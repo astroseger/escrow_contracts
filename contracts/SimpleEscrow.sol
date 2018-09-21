@@ -28,7 +28,7 @@ contract SimpleEscrow {
     }
     
     function transfer_all_tokens_back_and_selfdestruct()
-    public
+    internal
     {
         token.transfer(sender, token.balanceOf(this));
         selfdestruct(sender);
