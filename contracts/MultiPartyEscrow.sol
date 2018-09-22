@@ -6,10 +6,11 @@ contract MultiPartyEscrow {
     using SafeMath for uint256;
     
 
+    //the full ID of the singular payment channel = "[this, channel_id, nonce]"
     struct PaymentChannel {
         address sender;      // The account sending payments.
-        address receiver;    //The account receiving the payments.
-        uint32  replica_id;   //this is effectivly part of the reciver ID
+        address receiver;    // The account receiving the payments.
+        uint32  replica_id;  // id of particular service replica
         uint256 value;       // Total amount of tokens deposited to the channel. 
         uint32  nonce;       // "id" of the channel (after parly closed channel) 
         uint256 expiration;  // Timeout in case the recipient never closes.
@@ -32,46 +33,72 @@ contract MultiPartyEscrow {
 
     
     function deposit(uint256 value) 
+    returns(bool)
     public 
     {
         require(token.transferFrom(msg.sender, this, value), "Unable to transfer token to the contract"));
         balances[msg.sender] += value;
+        return true;
     }
     
     function withdraw(uint256 value)
+    returns(bool)
     public
     {
-        require(balances[msg.sender] >= value)
-        require(token.transfer(msg.sender, value))
-        balances[msg.sender] -= value
+        require(balances[msg.sender] >= value);
+        require(token.transfer(msg.sender, value));
+        balances[msg.sender] -= value;
+        return true;
     }
     
     //open a channel, tokan should be already being deposit
-    function open_channel(address  _recipient, uint256 value, uint256 _expiration, uint256 _replica_id) 
+    function open_channel(address  recipient, uint256 value, uint256 expiration, uint256 replica_id) 
+    returns(bool)
     public 
     {
         require(balances[msg.sender] >= value)
         channels[next_channel++] = PaymentChannel({
             sender       : msg.sender,
-            recipient    : _recipient,
+            recipient    : recipient,
             value        : value,
-            replica_id   : _replica_id,
+            replica_id   : replica_id,
             nonce        : 0,
-            expiration   : _expiration,
+            expiration   : expiration,
         });
-        balances[msg.sender] -= value
-//        emit DidOpen(channelId, msg.sender, receiver, value, tokenContract);
+        balances[msg.sender] -= value;
+        return true;
     }
     
-    function deposit_and_open_channel(address  _recipient, uint256 value, uint256 _expiration, uint256 _replica_id)
+
+
+    function deposit_and_open_channel(address  recipient, uint256 value, uint256 expiration, uint256 replica_id)
     public
     {
         require(deposit(value));
-        open_channel(_recipient, value, _expiration, _replica_id);
+        require(open_channel(recipient, value, expiration, replica_id));
+        return true;
     }
 
-
-    function channel_refund_and_reopen(uint256 channel_id)
+    //open a channel from the recipient side. Sender should send the signed permission to open the channel
+    function open_channel_by_recipient(address  sender, uint256 value, uint256 expiration, uint256 replica_id, bytes memory signature) 
+    returns(bool)
+    public 
+    {
+        require(balances[sender] >= value)
+        require(isValidSignature_open_channel(msg.sender, value, expiration, replica_id, signature, sender));
+        channels[next_channel++] = PaymentChannel({
+            sender       : sender,
+            recipient    : msg.sender,
+            value        : value,
+            replica_id   : replica_id,
+            nonce        : 0,
+            expiration   : expiration,
+        });
+        balances[sender] -= value;
+        return true;
+    }
+ 
+    function _channel_sendback_and_reopen(uint256 channel_id)
     private
     {
         PaymentChannel storage channel = channels[channel_id];
@@ -82,38 +109,30 @@ contract MultiPartyEscrow {
     }
 
     // the recipient can close the channel at any time by presenting a
-    // signed amount from the sender. the recipient will be sent that amount,
-    // and the remainder will go back to the sender
-    function channel_claim(uint256 channel_id, uint256 amount, bytes memory signature) 
+    // signed amount from the sender. The recipient will be sent that amount. The recipient can choose: 
+    // send the remainder to the sender (is_sendback == true), or put that amount into the new channel.
+    function channel_claim(uint256 channel_id, uint256 amount, bytes memory signature, bool is_sendback) 
     public 
     {
         PaymentChannel storage channel = channels[channel_id];
-        
-        require(amount <= channel.value)
-        
+        require(amount <= channel.value);
         require(msg.sender == channel.recipient);
-        require(isValidSignature(amount, channel.replica_id, channel.nonce, signature));
+ 
+        //"this" will be added later 
+        require(isValidSignature_claim(channel_id, channel.nonce, amount, signature, channel.sender));
         
         balances[msg.sender] += amount;
         channels[channel_id] -= amount;
-
-        channel_refund_and_reopen(channel_id);
-    }
-
-    function channel_claim_and_reopen(uint256 channel_id, uint256 amount, bytes memory signature) 
-    public 
-    {
-        PaymentChannel storage channel = channels[channel_id];
-        
-        require(amount <= channel.value)
-        
-        require(msg.sender == channel.recipient);
-        require(isValidSignature(amount, channel.replica_id, channel.nonce, signature));
-        
-        balances[msg.sender] += amount;
-        channels[channel_id] -= amount;
-        
-        channels[channel_id].nonce += 1
+    
+        if (is_sendback)    
+            {
+                _channel_refund_and_reopen(channel_id);
+            }
+            else
+            {
+                //simple reopen the new "channel"        
+                channels[channel_id].nonce += 1;
+            }
     }
 
 
@@ -135,20 +154,30 @@ contract MultiPartyEscrow {
     {
         require(msg.sender == channel[channel_id].sender)
         require(now >= channel[channel_id].expiration);
-        channel_refund_and_reopen();
+        _channel_refund_and_reopen();
     }
 
 
-    function isValidSignature(uint256 amount, bytes memory signature)
+    function isValidSignature_open_channel(address recipent, uint256 value, uint256 expiration, uint256 replica_id bytes memory signature, address sender)
     internal
     view
 	returns (bool)
     {
-        bytes32 message = prefixed(keccak256(abi.encodePacked(this, amount)));
-
+        bytes32 message = prefixed(keccak256(abi.encodePacked(this, recipent, value, expiration, replica_id)));
         // check that the signature is from the payment sender
         return recoverSigner(message, signature) == sender;
     }
+
+    function isValidSignature_claim(uint256 channel_id, uint256 nonce, uint256 amount, bytes memory signature, address sender)
+    internal
+    view
+	returns (bool)
+    {
+        bytes32 message = prefixed(keccak256(abi.encodePacked(this, channel_id, nonce, amount)));
+        // check that the signature is from the payment sender
+        return recoverSigner(message, signature) == sender;
+    }
+
 
     function splitSignature(bytes memory sig)
     internal
