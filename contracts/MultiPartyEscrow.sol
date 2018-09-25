@@ -8,13 +8,14 @@ contract MultiPartyEscrow {
    //using SafeMath for uint256;
     
 
-    //the full ID of the singular payment channel = "[this, channel_id, nonce]"
+    //the full ID of "atomic" payment channel = "[this, channel_id, nonce]"
     struct PaymentChannel {
         address sender;      // The account sending payments.
         address recipient;    // The account receiving the payments.
         uint256 replica_id;  // id of particular service replica
         uint256 value;       // Total amount of tokens deposited to the channel. 
-        uint256 nonce;       // "id" of the channel (after parly closed channel) 
+        uint256 nonce;       // "nonce" of the channel (by changing nonce we effectivly close the old channel ([this, channel_id, old_nonce])
+                             //  and open the new channel [this, channel_id, new_nonce]) 
         uint256 expiration;  // Timeout in case the recipient never closes.
     }
 
