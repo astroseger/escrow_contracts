@@ -13,9 +13,6 @@ of these channels.
 
 This documents is organazed as following: 
 
-### deposit/withdraw functions.
-
-Almost nothing to add here (see Introduction).  
 
 ### Atomic unidirectional payment channel
 
@@ -46,7 +43,9 @@ The main logic is following.
   funds back.
 * The sender can extend the expiration date add funds to the contract at any monents. 
 
-### The set of channels and useful functions
+### The set of channels and functions to manipalate them
+
+##### PaymentChannel structure
 
 Each "atomic" payment channel in MPE is represented by the following structure 
 
@@ -66,15 +65,40 @@ mapping (uint256 => PaymentChannel) public channels;
 
 ```
 
-Comments are selfexplanatory, but few commets are needed. 
+Comments are selfexplanatory, but few explanation migth be useful. 
 
-* The full ID of "atomic" payment channel is "[MPEContractAddress, channel_id, nonce]", there MPEContractAdress is 
-  the address of MPE contract (in order to prevent multi contract attack), channel_id is the index in channels mapping and nonce is 
-  a nonce in PaymentChannel struct. 
-* by changing nonce we effectivly close the old channel ([MPEContractAddress, channel_id, old_nonce])
-  and open the new channel [MPEContractAddress,, channel_id, new_nonce]). It will be explained in more details later.
-* The full ID of the recipient is actually [recipient, replica_id]. By doing this we allow service provider to use the
-  same ethereum wallet for different replica.
+* The full ID of "atomic" payment channel is "[MPEContractAddress, channel_id, nonce]". The MPEContractAdress is the address of MPE contract,
+   and we need it prevent multi contracts attacks. channel_id is a index in the channels mapping. And nonce is a part close/reopen logic.
+* by changing nonce we effectivly close the old channel [MPEContractAddress, channel_id, old_nonce]
+  and open the new channel [MPEContractAddress, channel_id, new_nonce]. How we use it will be explained later.
+* The full ID of the recipient is [recipient, replica_id]. By doing this we allow service provider to use the
+  same ethereum wallet for different replicas.
+
+##### Functions 
+
+The following function open the new "atomic" channel assuming that the caller is the sender.
+```Solidity
+function open_channel(address  recipient, uint256 value, uint256 expiration, uint256 replica_id)
+```
+This function simply create new PaymentChannel structure and add it to the channels list.
+
+The following function open the channel from the recipient side.
+```Solidity
+function open_channel_by_recipient(address  sender, uint256 value, uint256 expiration, uint256 replica_id, bytes memory signature)
+```
+The recipient should have the singed permission from the sender to open a channel. 
+This permission contains the following signed message [MPEContractAdress, recipient_address, replica_id, value, expiration], 
+which should be sended off-chain. See usercases for details.
+
+  
+
+ 
+### Usercases 
+
+#### Usual useflow
+
+#### Open the channel from the service side
+
 
 
 
