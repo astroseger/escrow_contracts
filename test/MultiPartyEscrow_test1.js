@@ -130,6 +130,7 @@ contract('MultiPartyEscrow', function(accounts) {
             let replica_id = 44
             //open the channel from the server side
             let sgn = await sign_funs.wait_signed_open_channel_message(accounts[4], escrow.address, accounts[7], value, expiration, replica_id)          
+
             await escrow.open_channel_by_recipient(accounts[4], value, expiration, replica_id , sgn, {from:accounts[7]})
             //console.log(accounts)
             assert.equal((await escrow.next_channel_id.call()).toNumber(), 3)    
@@ -161,5 +162,35 @@ contract('MultiPartyEscrow', function(accounts) {
           //  assert.equal(balance4, 41000, "After closure balance of accounts[4] should be 41000");
        });
  
+    it ("Check validity of the signatures with js-server part (claim)", async function()
+        {
+            //claim message
+            let sgn = await sign_funs.wait_signed_claim_message(accounts[2], escrow.address, 1789, 1917, 31415);  
+            assert.equal(sign_funs.isValidSignature_claim(escrow.address, 1789, 1917, 31415, sgn, accounts[2]), true,   "signature should be ok")
+            assert.equal(sign_funs.isValidSignature_claim(escrow.address, 1789, 1917, 31415, sgn, accounts[3]), false,  "signature should be false")
+            assert.equal(sign_funs.isValidSignature_claim(escrow.address, 1789, 1917, 27182, sgn, accounts[2]), false,  "signature should be false")
+            assert.equal(sign_funs.isValidSignature_claim(escrow.address, 1789, 1918, 31415, sgn, accounts[2]), false,  "signature should be false")
+            assert.equal(sign_funs.isValidSignature_claim(escrow.address, 1941, 1917, 31415, sgn, accounts[2]), false,  "signature should be false")
+            assert.equal(sign_funs.isValidSignature_claim(accounts[2],    1789, 1917, 31415, sgn, accounts[2]), false,  "signature should be ok")
+             
+        });
+
+   it ("Check validity of the signatures with js-server part (open channel)", async function()
+        {
+            //open the channel message
+            let expiration = web3.eth.getBlock(web3.eth.blockNumber).timestamp + 10000000
+            let value      = 1000
+            let replica_id = 44
+
+            let sgn = await sign_funs.wait_signed_open_channel_message(accounts[4], escrow.address, accounts[7], value, expiration, replica_id)
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[7], value, expiration, replica_id, sgn, accounts[4]), true, "signature should be ok")
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[7], value, expiration, replica_id, sgn, accounts[5]), false, "signature should be false")
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[7], value, expiration, 0         , sgn, accounts[4]), false, "signature should be false")
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[7], value, 42,         replica_id, sgn, accounts[4]), false, "signature should be false")
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[7], 42,    expiration, replica_id, sgn, accounts[4]), false, "signature should be false")
+            assert.equal(sign_funs.isValidSignature_open_channel(escrow.address, accounts[4], value, expiration, replica_id, sgn, accounts[4]), false, "signature should be false")
+            assert.equal(sign_funs.isValidSignature_open_channel(accounts[0],    accounts[7], value, expiration, replica_id, sgn, accounts[4]), false, "signature should be false")
+        });
+
 });
 

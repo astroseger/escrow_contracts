@@ -66,7 +66,7 @@ function isValidSignature_claim(contract_address, channel_id, nonce, amount, sig
         ethereumjsutil.stripHexPrefix(expectedSigner).toLowerCase();
 }
 
-function isValidSignature_open_channel(contract_address, recipient_address, value, expiration, replica_id, expectedSigner) {
+function isValidSignature_open_channel(contract_address, recipient_address, value, expiration, replica_id, signature, expectedSigner) {
     var message = prefixed(compose_open_channel_message(contract_address, recipient_address, value, expiration, replica_id));
     var signer = recoverSigner(message, signature);
     return signer.toLowerCase() ==
@@ -111,4 +111,5 @@ async function wait_signed_open_channel_message(from_account, contract_address, 
 module.exports.wait_signed_claim_message         = wait_signed_claim_message;
 module.exports.wait_signed_open_channel_message  = wait_signed_open_channel_message;
 module.exports.isValidSignature_claim            = isValidSignature_claim;
+module.exports.isValidSignature_open_channel     = isValidSignature_open_channel;
 
