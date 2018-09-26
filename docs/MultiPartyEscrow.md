@@ -102,7 +102,7 @@ The recipient has two possibility:
   and open the new one [MPEContractAdress, channel_id, new_nonce]
 
 
-By the following functions the client can extend expiration time and he can funds the channel at any time.
+By the following functions the client can extend expiration time and he can add funds to the channel at any time.
 He also can claim all funds from the channel after the expiration time reached.
 
 ```Solidity
@@ -139,7 +139,7 @@ For example server check that signature is authentic, that amount is correct, th
 
 * CLIENT1 call: open_channel(server=SERVER1, replica=REPLICA1, value=10 AGI, expiration=expiratoin0)
 * MPE create the PaymentChanel: [channel_id = 0, sender=CLIENT1, recipient=SERVER1, replica_id=REPLICA1, value=10 AGI, nonce=0, expiration=expiration0]
-* MPE subscribe 10 AGI from the balance of the CLIENT1 
+* MPE subtract 10 AGI from the balance of the CLIENT1 
 * CLIENT1 send to SERVER1/REPLICA1 authorization SIGNED_BY_CLIENT1(ContractAdress=MPEAdress, channel_id=0, nonce=0, amount=1)
 * CLIENT1 send to SERVER1/REPLICA1 authorization SIGNED_BY_CLIENT1(ContractAdress=MPEAdress, channel_id=0, nonce=0, amount=2)
 * CLIENT1 send to SERVER1/REPLICA1 authorization SIGNED_BY_CLIENT1(ContractAdress=MPEAdress, channel_id=0, nonce=0, amount=3)
@@ -157,7 +157,7 @@ For example server check that signature is authentic, that amount is correct, th
 * Client decides to put more funds in the channel and extend it expiration datas.
 * CLEINT1 calls channel_extend_and_add_funds(channel_id=0, new_expiration = now + 1day, amount=10 AGI)
 * MPE change the value and expiration data in the PaymentChannel: [channel_id = 0, sender=CLIENT1, recipient=SERVER1, replica_id=REPLICA1, value=15 AGI, nonce=0, expiration=expiration1]
-* MPE subscribe 10 AGI from the balance of the CLIENT1
+* MPE subtract 10 AGI from the balance of the CLIENT1
 * CLIENT1 send to SERVER1/REPLICA1 authorization SIGNED_BY_CLIENT1(ContractAdress=MPEAdress, channel_id=0, nonce=1, amount=5)
 * CLIENT1 send to SERVER1/REPLICA1 authorization SIGNED_BY_CLIENT1(ContractAdress=MPEAdress, channel_id=0, nonce=1, amount=6)
 * .....
@@ -186,7 +186,7 @@ formal example:
 * CLIENT1 sends (off-chain) the signed message SIGNED_BY_CLIENT(ContractAdress=MPEAdress, recipient=SERVER1, replica_id=REPLICA1, value=some_amount, expiration=some_expiration)
 * SERVER1 calls: open_channel_by_recipient(sender=CLIENT1, value=some_amount, expiration=some_expiration, replica_id=REPLICA1, signature = SIGNED_BY_CLIENT(ContractAdress=MPEAdress, recipient=SERVER1, replica_id=REPLICA1, value=some_amount, expiration=some_expiration))
 * MPE create the PaymentChanel: [channel_id = 0, sender=CLIENT1, recipient=SERVER1, replica_id=REPLICA1, value="some_amount" AGI, nonce=0, expiration="some_expiration"]
-* MPE subscribe "some_amount" AGI from the balance of the CLIENT1
+* MPE subtract "some_amount" AGI from the balance of the CLIENT1
 * SERVER1 wait conformation from the blockchain that channel was created
 * usual workflow can be started now.
 * ......
