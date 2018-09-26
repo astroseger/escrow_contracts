@@ -198,6 +198,7 @@ In any case, the replicas very rarely need to send on-chain transactions. It mea
 Instead it could be some centralized server to sign the transactions from the daemons (in some cases it even can be done in semi-manual manner by the service owner). 
 * open_channel_by_recipient it is simply a way to force the server to pay the gas for channel creation.
 * By the similar technique we could force the server to pay the gas for channel_extend_and_add_funds  (extend the expiration date and add funds to the channel)
+* In the current version the client sign off-chain authorization messages with the ethereum privet key. It means that, unlike the server, the client should have access to the privet key almost constantly. We could easily change it by using different key for signing off-chain messages, but I don't think that we should, because signing with the ethereum private key makes MPE much more compact.
 
 
 
