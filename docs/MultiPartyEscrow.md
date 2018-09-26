@@ -5,8 +5,8 @@
 The MultiPartyEscrow contract (hereafter MPE) have two main functionalities:
 
 1. Very simple wallet with deposit and withdraw functions. Everybody can deposit AGI
-tokens into MPE, using deposit function, and everybody can withdraw
-their funds (which are not escrowed at the moment).
+tokens into MPE, via deposit function, and everybody can withdraw
+their funds (which have not been escrowed at the moment).
 2. The set of the simple ("atomic") unidirectional payment channels
 between clients and services providers and functions for manipulation
 of these channels. 
