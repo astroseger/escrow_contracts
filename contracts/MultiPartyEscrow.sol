@@ -8,6 +8,8 @@ contract MultiPartyEscrow {
    //using SafeMath for uint256;
     
 
+    //TODO: we could use uint64 for replica_id and nonce (it could be cheaper to store but more expensive to operate with)
+
     //the full ID of "atomic" payment channel = "[this, channel_id, nonce]"
     struct PaymentChannel {
         address sender;      // The account sending payments.
@@ -27,6 +29,11 @@ contract MultiPartyEscrow {
  
     ERC20 public token; // Address of token contract
     
+    //TODO: optimize events. Do we need more (or less) events?
+    event event_channel_open       (uint256 channel_id,         address indexed sender, address indexed recipient, uint256 indexed replica_id);
+    //event event_channel_reopen     (uint256 channel_id,         address indexed sender, address indexed recipient, uint256 indexed replica_id, uint256 nonce);
+    //event event_channel_torecipient(uint256 indexed channel_id, address indexed sender, address indexed recipient, uint256 amount);
+    //event event_channel_tosender   (uint256 indexed channel_id, address indexed sender, address indexed recipient, uint256 amount);
 
     constructor (address _token)
     public
@@ -59,7 +66,7 @@ contract MultiPartyEscrow {
     returns(bool) 
     {
         require(balances[msg.sender] >= value);
-        channels[next_channel_id++] = PaymentChannel({
+        channels[next_channel_id] = PaymentChannel({
             sender       : msg.sender,
             recipient    : recipient,
             value        : value,
@@ -68,6 +75,8 @@ contract MultiPartyEscrow {
             expiration   : expiration
         });
         balances[msg.sender] -= value;
+        emit event_channel_open(next_channel_id, msg.sender, recipient, replica_id);
+        next_channel_id += 1;
         return true;
     }
     
@@ -90,7 +99,7 @@ contract MultiPartyEscrow {
         require(balances[sender] >= value);
         require(isValidSignature_open_channel(msg.sender, value, expiration, replica_id, signature, sender));
 
-        channels[next_channel_id++] = PaymentChannel({
+        channels[next_channel_id] = PaymentChannel({
             sender       : sender,
             recipient    : msg.sender,
             value        : value,
@@ -99,6 +108,9 @@ contract MultiPartyEscrow {
             expiration   : expiration
         });
         balances[sender] -= value;
+
+        emit event_channel_open(next_channel_id, sender, msg.sender, replica_id);
+        next_channel_id += 1;
         return true;
     }
  
